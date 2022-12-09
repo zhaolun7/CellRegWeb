@@ -201,8 +201,23 @@ export default {
       this.init_session(S2, 'canvas_2');
       this.init_session(CMP_S, 'canvas_comparison');
 
-
-
+      function syncChange(controls_A, controls_B) {
+        controls_A.addEventListener('change', function(){
+          controls_B.target.copy(controls_A.target);
+          controls_B.object.position.copy(controls_A.object.position)
+          controls_B.object.zoom = controls_A.object.zoom;
+          controls_B.object.quaternion.copy(controls_A.object.quaternion)
+          // console.log("A -> B");
+        })
+        controls_B.addEventListener('change', function(){
+          controls_A.target.copy(controls_B.target);
+          controls_A.object.position.copy(controls_B.object.position)
+          controls_A.object.zoom = controls_B.object.zoom;
+          controls_A.object.quaternion.copy(controls_B.object.quaternion)
+          // console.log("B -> A");
+        })
+      }
+      syncChange(S1.controls, S2.controls)
       S1.cmp_group = CMP_S.cell_group_1;
       S2.cmp_group = CMP_S.cell_group_2;
 
@@ -250,7 +265,6 @@ export default {
       s.camera.position.set(0, 0, z_deep);
       // console.log(z_deep)
       s.camera.updateProjectionMatrix();
-      s.scene.add(s.camera);
       s.canvas = document.querySelector('#' + name);
       s.canvas.parent_object = s;
       // console.log(name)
@@ -301,9 +315,8 @@ export default {
         }
         s.renderer.render(s.scene, s.camera);
       }
-      S2.camera.position.copy(S1.camera.position)
-      // S2.camera.quaternion.copy(S1.camera.quaternion);
-      // S2.camera.zoom = S1.camera.zoom
+
+
 
       renderSession(S1);
       renderSession(S2);
