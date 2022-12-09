@@ -51,7 +51,7 @@ let S1 = new Object();
 
 let S2 = new Object();
 let CMP_S = new Object();
-let cell_line_opacity = 0.3;
+let cell_line_opacity = 0.1;
 
 let session_cache_object = new Map(); //{"task_id":{session_id:list of cell}}
 let task_and_session = ""
@@ -70,21 +70,13 @@ export default {
       "getNumberOfSessions"
     ])
   },
-  // setup() {
-  //   const state = reactive({
-  //     s1: new Object()
-  //   })
-  //   return {
-  //     state
-  //   }
-  // },
 
   mounted() {
     this.draw_big_when_created();
     this.registerManyThings();
     // console.log("S1",CMP_S)
     task_and_session = this.getTaskId + "_" + this.session1
-    console.log("out getCellInfos:task_and_session->", task_and_session)
+    // console.log("out getCellInfos:task_and_session->", task_and_session)
     if (this.getTaskId.startsWith("empty") == false) {
       this.getCellInfos();
       this.add_cells_in_one_session(S1, 0xffffff, task_and_session)
@@ -135,10 +127,10 @@ export default {
       this.add_cells_in_one_session(S2, 0xffffff, task_and_session)
     },
     add_cells_in_one_session(s, color, task_and_session) {
-      console.log("add_cells_in_one_session:task_and_session->", task_and_session)
+      // console.log("add_cells_in_one_session:task_and_session->", task_and_session)
       let cellsArr = session_cache_object.get(task_and_session)
-      console.log("session_cache_object->",session_cache_object)
-      console.log("cellsArr->",cellsArr)
+      // console.log("session_cache_object->",session_cache_object)
+      // console.log("cellsArr->",cellsArr)
       if (cellsArr === undefined) {
         return;
       }
@@ -167,7 +159,7 @@ export default {
       alphaTexture.wrapS = THREE.ClampToEdgeWrapping;
       alphaTexture.wrapT = THREE.ClampToEdgeWrapping;
       alphaTexture.repeat.set(1, 1);
-      console.log("s.hasPlaneMesh:", s.hasPlaneMesh)
+      // console.log("s.hasPlaneMesh:", s.hasPlaneMesh)
       if (s.hasPlaneMesh === false) {
         let planeGeometry = new THREE.PlaneGeometry(HEIGHT, WIDTH, 1, 1);
         let planeMeterial = new THREE.MeshBasicMaterial({color: color, side: THREE.DoubleSide, transparent: true});
@@ -184,15 +176,15 @@ export default {
 
     },
     getCellInfos() {
-      console.log("in getCellInfos:task_and_session->", task_and_session)
+      // console.log("in getCellInfos:task_and_session->", task_and_session)
       if (session_cache_object.has(task_and_session) === false) {
         api.findBySession(task_and_session).then(res => {
           let result_cell = res.data._embedded.cell;
-          console.log("task_and_session:", result_cell[0].session)
+          // console.log("task_and_session:", result_cell[0].session)
           session_cache_object.set(result_cell[0].session, result_cell);
         })
       } else {
-        console.log("we have!", task_and_session)
+        // console.log("we have!", task_and_session)
       }
 
     },
@@ -336,7 +328,7 @@ export default {
         imgBuffer[pos + 1] = imgBuffer[pos];
         imgBuffer[pos + 2] = imgBuffer[pos];
       }
-/*
+
       let material = new THREE.LineDashedMaterial({
         color: colorHex,
         transparent: true,
@@ -349,28 +341,27 @@ export default {
         let x = points[idx][0];
         let y = points[idx][1];
         points_t3[idx] = (new THREE.Vector3(y - 174, x - 124, 0)); // T' because display of threejs is different from matlab matrix display ?
-        // points.push(new THREE.Vector3(p.x - 150,p.y - 150, 0));
       }
 
       let geometry = new THREE.BufferGeometry().setFromPoints(points_t3);
-      // let line = new THREE.Line(geometry, material);
+      let line = new THREE.Line(geometry, material);
       line.renderOrder = 10;
       // line.cell = cell; // made a link
       cell_group.add(line);
-      */
+
     }
   },
   watch: {
     getTaskChangeFlag: function (order) {
-      console.log("SessionCompare: Ha! I find taskId change! new value is ", order)
+      // console.log("SessionCompare: Ha! I find taskId change! new value is ", order)
       session_cache_object.clear()
       for (let idx of [...Array(this.getNumberOfSessions).keys()]) {
         let tas = this.getTaskId + "_" + (idx + 1)
-        console.log("tas:",tas)
+        // console.log("tas:",tas)
         if (session_cache_object.has(tas) === false) {
           api.findBySession(tas).then(res => {
             let result_cell = res.data._embedded.cell;
-            console.log("task_and_session:", result_cell[0].session)
+            // console.log("task_and_session:", result_cell[0].session)
             session_cache_object.set(result_cell[0].session, result_cell);
           })
         }
