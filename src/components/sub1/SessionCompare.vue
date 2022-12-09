@@ -13,15 +13,22 @@
               <!--              <br v-if="idx > 0 & idx % 3 === 0" />-->
             </el-radio-group>
           </div>
-          <canvas id="canvas_1" class="big_canvas"></canvas>
+          <canvas id="canvas_1" class="big_canvas" @click.right="rightClick" ></canvas>
         </div>
       </el-col>
       <el-col :span="4" style="margin-top: 50px">
         <div class="grid-content ep-bg-purple" >
           <canvas id="canvas_comparison" class="cmp_canvas"></canvas>
           <div>
-            <p>Cell ID: 200</p>
-            <p>Cell ID: 400</p>
+            <div>
+              <p>Cell ID: {{session1_selected_cell_info.cell_id}}</p>
+              <p>Neighbors: {{session1_selected_cell_info.neighbors}}</p>
+            </div>
+
+            <div>
+              <p>Cell ID: {{session2_selected_cell_info.cell_id}}</p>
+              <p>Neighbors: {{session2_selected_cell_info.neighbors}}</p>
+            </div>
           </div>
         </div>
 
@@ -34,7 +41,7 @@
               <el-radio v-for="idx in [...Array(getNumberOfSessions).keys()]" :label="idx+1" border @change="onChange_2">{{ idx+1 }}</el-radio>
             </el-radio-group>
           </div>
-          <canvas id="canvas_2" class="big_canvas"></canvas>
+          <canvas id="canvas_2" class="big_canvas" @click.right="rightClick"></canvas>
         </div>
       </el-col>
     </el-row>
@@ -48,8 +55,9 @@ import * as THREE from 'three'
 import {OrbitControls} from 'three/examples/jsm/controls/OrbitControls'
 // import { reactive } from "vue"
 let S1 = new Object();
-
 let S2 = new Object();
+S1.name = "S1"
+S2.name = "S2"
 let CMP_S = new Object();
 let cell_line_opacity = 0.1;
 
@@ -101,7 +109,6 @@ export default {
         resizeRender(S2);
         resizeRender(CMP_S);
       })
-
       document.addEventListener('pointermove', (event) => {
         // console.log(event)
         function _check_move(s) {
@@ -144,8 +151,11 @@ export default {
         check_click(S1);
         check_click(S2);
       });
-      //onRightClick
-      document.addEventListener( 'contextmenu', (event) => {
+
+      // //onRightClick
+      // document.addEventListener( 'contextmenu',);
+    },
+    rightClick(event) {
         function draw_comparing_cell(cell, group) {
           // draw border
           let xx = 99999; let yy = 99999;
@@ -194,9 +204,9 @@ export default {
           let maxPercent = 0;
           for(let block of cell.blocks) {
             let percent = block[2];
-              if(maxPercent < percent) {
-                maxPercent = percent;
-              }
+            if(maxPercent < percent) {
+              maxPercent = percent;
+            }
           }
           for(let blockIdx in cell.blocks) {
             let block = cell.blocks[blockIdx];
@@ -226,7 +236,7 @@ export default {
           group.add(planeMesh);
         }
         // console.log(event)
-        function check_click(s) {
+        function check_click(s, thisobj) {
           let rect = s.canvas.getBoundingClientRect();
           if (event.clientX >= rect.left && event.clientX <= rect.right &&
               event.clientY >= rect.top && event.clientY <= rect.bottom) {
@@ -240,11 +250,19 @@ export default {
                 let task_and_session = lineObject.userData["task_and_session"];
                 let idx = parseInt(lineObject.userData["idx"]);
                 let cell = session_cache_object.get(task_and_session)[idx];
-                console.log(cell)
+                // console.log(cell)
                 if(cell) {
-                  console.log("cell:",cell)
                   draw_comparing_cell(cell, s.cmp_group)
+                  if(s.name === "S1") {
+                    thisobj.session1_selected_cell_info.cell_id = cell.cid;
+                    thisobj.session1_selected_cell_info.neighbors = cell.relation[thisobj.session2]
+                  } else  {
+                    thisobj.session2_selected_cell_info.cell_id = cell.cid;
+                    thisobj.session2_selected_cell_info.neighbors = cell.relation[thisobj.session1]
+                  }
                 }
+
+
               } else {
                 lineObject.currentHex = lineObject.currentHex_b;
                 lineObject.material.color.setHex( lineObject.currentHex );
@@ -254,10 +272,9 @@ export default {
             }
           }
         }
-        check_click(S1);
-        check_click(S2);
-      });
-    },
+        check_click(S1,this);
+        check_click(S2,this);
+      },
     onChange_1(v) {
       task_and_session = this.getTaskId + "_" + this.session1
       this.getCellInfos();
