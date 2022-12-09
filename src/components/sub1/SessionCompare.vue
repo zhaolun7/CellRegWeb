@@ -60,7 +60,15 @@ export default {
   data() {
     return {
       session1: 1,
-      session2: 2
+      session2: 2,
+      session1_selected_cell_info: {
+        cell_id:"-",
+        neighbors: {}
+      },
+      session2_selected_cell_info: {
+        cell_id:"-",
+        neighbors: {}
+      },
     }
   },
   computed: {
@@ -89,36 +97,170 @@ export default {
         function resizeRender(s) {
           s.renderer.setSize(s.canvas.clientWidth, s.canvas.clientHeight, false);
         }
-
         resizeRender(S1);
         resizeRender(S2);
         resizeRender(CMP_S);
       })
 
-      document.addEventListener('pointermove', onPointerMove);
-
-      function onPointerMove(event) {
+      document.addEventListener('pointermove', (event) => {
         // console.log(event)
-        let s1 = document.querySelector('#canvas_1').parent_object;
-        let s2 = document.querySelector('#canvas_2').parent_object;
-
         function _check_move(s) {
           // console.log(s)
           let rect = s.canvas.getBoundingClientRect();
-          if (event.clientX >= rect.left && event.clientX <= rect.right && event.clientY >= rect.top && event.clientY <= rect.bottom) {
+          if (event.clientX >= rect.left && event.clientX <= rect.right &&
+              event.clientY >= rect.top && event.clientY <= rect.bottom) {
             s.pointer.x = (event.clientX - rect.left) / rect.width * 2 - 1;
             s.pointer.y = -(event.clientY - rect.top) / rect.height * 2 + 1;
           }
         }
+        _check_move(S1);
+        _check_move(S2);
+      });
 
-        _check_move(s1);
-        _check_move(s2);
-      }
+
+      document.addEventListener( 'click', (event) => {
+        // console.log(event)
+        function check_click(s) {
+          let rect = s.canvas.getBoundingClientRect();
+          if (event.clientX >= rect.left && event.clientX <= rect.right &&
+              event.clientY >= rect.top && event.clientY <= rect.bottom) {
+            const intersects = s.raycaster.intersectObjects( s.cell_group.children, false );
+            // console.log(intersects)
+            if (intersects.length > 0 && intersects[0].object.type == 'Line') {
+              let lineObject = intersects[0].object
+              lineObject.selected_nochange = ! lineObject.selected_nochange;
+              if (lineObject.selected_nochange) {
+                lineObject.currentHex_b = lineObject.currentHex;
+                // lineObject.material.transparent = false;
+              } else {
+                lineObject.currentHex = lineObject.currentHex_b;
+                lineObject.material.color.setHex( lineObject.currentHex );
+                lineObject.material.opacity = cell_line_opacity;
+                // lineObject.material.transparent = true;
+              }
+            }
+          }
+        }
+        check_click(S1);
+        check_click(S2);
+      });
+      //onRightClick
+      document.addEventListener( 'contextmenu', (event) => {
+        function draw_comparing_cell(cell, group) {
+          // draw border
+          let xx = 99999; let yy = 99999;
+          for(let p of cell.points) {
+            // console.log(p)
+            if(xx > p[0]) {
+              xx = p[0];
+            }
+            if(yy > p[1]) {
+              yy = p[1];
+            }
+          }
+          let points = [];
+          for(let p of cell.points) {
+            points.push(new THREE.Vector3(p[1] - yy,p[0] - xx, 0));
+          }
+          // console.log(points)
+          let geometry = new THREE.BufferGeometry().setFromPoints(points);
+          let material = new THREE.LineDashedMaterial({
+            color: 0xffffff,
+            transparent: true,
+            opacity: cell_line_opacity*2,
+            // opacity: 1,
+            side: THREE.DoubleSide,
+            depthTest: false
+          });
+          let line = new THREE.Line(geometry, material);
+          line.renderOrder = 10;
+          // line.cell = cell; // made a link
+          while(group.children.length > 0) {
+            group.children.pop();
+          }
+          group.add(line);
+
+          //draw plane
+          const WIDTH = 30;
+          const HEIGHT = 30;
+          const imgBuffer = new Float32Array(HEIGHT*WIDTH*4).fill(0)
+          //init
+          for(let i = 0; i< HEIGHT; i ++) {
+            for(let j = 0; j < WIDTH; j++) {
+              let pos = (i*WIDTH +j) * 4;
+              imgBuffer[pos+3] = 255; // alpha channel
+            }
+          }
+          let maxPercent = 0;
+          for(let block of cell.blocks) {
+            let percent = block[2];
+              if(maxPercent < percent) {
+                maxPercent = percent;
+              }
+          }
+          for(let blockIdx in cell.blocks) {
+            let block = cell.blocks[blockIdx];
+            let pos = (WIDTH*(block[0] - xx) + (block[1] - yy))*4;
+            let v = block[2] / maxPercent * 255;
+            if(v > 255){
+              v = 255;
+            }
+            // v = 255;
+            imgBuffer[pos] = v;
+            imgBuffer[pos+1] = v;
+            imgBuffer[pos+2] = v;
+          }
+          const imgRealBuffer = Uint8Array.from(imgBuffer);
+          let alphaTexture = new THREE.DataTexture(imgRealBuffer, WIDTH, HEIGHT, THREE.RGBAFormat);
+          alphaTexture.needsUpdate = true;
+          alphaTexture.wrapS = THREE.RepeatWrapping;
+          alphaTexture.wrapT = THREE.RepeatWrapping;
+          alphaTexture.repeat.set( 1, 1 );
+
+          var planeGeometry = new THREE.PlaneGeometry(HEIGHT, WIDTH);
+          var planeMeterial = new THREE.MeshBasicMaterial({color: 0xffffff, side: THREE.DoubleSide, transparent: true});
+          planeMeterial.alphaMap = alphaTexture;
+          var planeMesh = new THREE.Mesh(planeGeometry,planeMeterial);
+          planeMesh.position.set(14,14,0)
+          // console.log(planeMesh);
+          group.add(planeMesh);
+        }
+        // console.log(event)
+        function check_click(s) {
+          let rect = s.canvas.getBoundingClientRect();
+          if (event.clientX >= rect.left && event.clientX <= rect.right &&
+              event.clientY >= rect.top && event.clientY <= rect.bottom) {
+            const intersects = s.raycaster.intersectObjects( s.cell_group.children, false );
+            // console.log(intersects)
+            if (intersects.length > 0 && intersects[0].object.type == 'Line') {
+              let lineObject = intersects[0].object
+              lineObject.selected_nochange = ! lineObject.selected_nochange;
+              if (lineObject.selected_nochange) {
+                lineObject.currentHex_b = lineObject.currentHex;
+                let task_and_session = lineObject.userData["task_and_session"];
+                let idx = parseInt(lineObject.userData["idx"]);
+                let cell = session_cache_object.get(task_and_session)[idx];
+                console.log(cell)
+                if(cell) {
+                  console.log("cell:",cell)
+                  draw_comparing_cell(cell, s.cmp_group)
+                }
+              } else {
+                lineObject.currentHex = lineObject.currentHex_b;
+                lineObject.material.color.setHex( lineObject.currentHex );
+                lineObject.material.opacity = cell_line_opacity;
+                // lineObject.material.transparent = true;
+              }
+            }
+          }
+        }
+        check_click(S1);
+        check_click(S2);
+      });
     },
     onChange_1(v) {
       task_and_session = this.getTaskId + "_" + this.session1
       this.getCellInfos();
-
       this.add_cells_in_one_session(S1, 0xffffff, task_and_session)
     },
     onChange_2(v) {
@@ -149,7 +291,7 @@ export default {
         let points = cellsArr[idx].points
         let blocks = cellsArr[idx].blocks;
         // console.log(blocks)
-        this.draw_single_cell(s.cell_group, points, blocks, color, imgBuffer, WIDTH);
+        this.draw_single_cell(s.cell_group, points, blocks, color, imgBuffer, WIDTH, task_and_session, idx);
       }
 
 
@@ -213,10 +355,10 @@ export default {
       S1.cmp_group = CMP_S.cell_group_1;
       S2.cmp_group = CMP_S.cell_group_2;
 
-      const x1 = CMP_S.cell_group_1.position.x;
-      const x2 = CMP_S.cell_group_2.position.x;
-      CMP_S.cell_group_1.position.x = x1 + 10;// TODO: auto change distance!
-      CMP_S.cell_group_2.position.x = x2 - 10;
+      // const x1 = CMP_S.cell_group_1.position.x;
+      // const x2 = CMP_S.cell_group_2.position.x;
+      // CMP_S.cell_group_1.position.x = x1 ;// TODO: auto change distance!
+      // CMP_S.cell_group_2.position.x = x2 ;
 
       S1.hasPlaneMesh = false;
       S2.hasPlaneMesh = false;
@@ -318,7 +460,7 @@ export default {
 
       requestAnimationFrame(this.render);
     },
-    draw_single_cell(cell_group, points, blocks, colorHex, imgBuffer, WIDTH) {
+    draw_single_cell(cell_group, points, blocks, colorHex, imgBuffer, WIDTH, task_and_session, idx) {
       for (let data of blocks) {
         let pos = (WIDTH * data[0] + data[1]) * 4;
         imgBuffer[pos] = imgBuffer[pos] * 0.5 + data[2] * 2560;
@@ -346,6 +488,8 @@ export default {
       let geometry = new THREE.BufferGeometry().setFromPoints(points_t3);
       let line = new THREE.Line(geometry, material);
       line.renderOrder = 10;
+      line.userData["task_and_session"] = task_and_session;
+      line.userData["idx"] = idx;
       // line.cell = cell; // made a link
       cell_group.add(line);
 
