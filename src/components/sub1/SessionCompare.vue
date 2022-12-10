@@ -8,12 +8,12 @@
         <div class="grid-content ep-bg-purple" >
           <div style="margin-bottom: 5px">
             <el-radio-group v-model="session1" size="small">
-              <el-radio v-for="idx in [...Array(getNumberOfSessions).keys()]" :label="idx+1" border @change="onChange_1">{{ idx+1 }}</el-radio>
+              <el-radio v-for="idx in [...Array(getNumberOfSessions).keys()]" :label="idx+1" border @change="onSelectButtonChange">{{ idx+1 }}</el-radio>
               <!-- TODO new line if number is more than 7 -->
               <!--              <br v-if="idx > 0 & idx % 3 === 0" />-->
             </el-radio-group>
           </div>
-          <canvas id="canvas_1" class="big_canvas" @click.right="rightClick" ></canvas>
+          <canvas id="canvas_1" class="big_canvas" @click="clickCanvas" ></canvas>
         </div>
       </el-col>
       <el-col :span="4" style="margin-top: 50px">
@@ -38,10 +38,10 @@
 
           <div style="margin-bottom: 5px">
             <el-radio-group v-model="session2" size="small">
-              <el-radio v-for="idx in [...Array(getNumberOfSessions).keys()]" :label="idx+1" border @change="onChange_2">{{ idx+1 }}</el-radio>
+              <el-radio v-for="idx in [...Array(getNumberOfSessions).keys()]" :label="idx+1" border @change="onSelectButtonChange">{{ idx+1 }}</el-radio>
             </el-radio-group>
           </div>
-          <canvas id="canvas_2" class="big_canvas" @click.right="rightClick"></canvas>
+          <canvas id="canvas_2" class="big_canvas" @click="clickCanvas"></canvas>
         </div>
       </el-col>
     </el-row>
@@ -60,9 +60,7 @@ S1.name = "S1"
 S2.name = "S2"
 let CMP_S = new Object();
 let cell_line_opacity = 0.1;
-
 let session_cache_object = new Map(); //{"task_id":{session_id:list of cell}}
-let task_and_session = ""
 export default {
   name: 'session_compare',
   data() {
@@ -90,13 +88,6 @@ export default {
   mounted() {
     this.draw_big_when_created();
     this.registerManyThings();
-    // console.log("S1",CMP_S)
-    task_and_session = this.getTaskId + "_" + this.session1
-    // console.log("out getCellInfos:task_and_session->", task_and_session)
-    if (this.getTaskId.startsWith("empty") == false) {
-      this.getCellInfos();
-      this.add_cells_in_one_session(S1, 0xffffff, task_and_session)
-    }
     this.render();
   },
   methods: {
@@ -123,39 +114,8 @@ export default {
         _check_move(S1);
         _check_move(S2);
       });
-
-
-      document.addEventListener( 'click', (event) => {
-        // console.log(event)
-        function check_click(s) {
-          let rect = s.canvas.getBoundingClientRect();
-          if (event.clientX >= rect.left && event.clientX <= rect.right &&
-              event.clientY >= rect.top && event.clientY <= rect.bottom) {
-            const intersects = s.raycaster.intersectObjects( s.cell_group.children, false );
-            // console.log(intersects)
-            if (intersects.length > 0 && intersects[0].object.type == 'Line') {
-              let lineObject = intersects[0].object
-              lineObject.selected_nochange = ! lineObject.selected_nochange;
-              if (lineObject.selected_nochange) {
-                lineObject.currentHex_b = lineObject.currentHex;
-                // lineObject.material.transparent = false;
-              } else {
-                lineObject.currentHex = lineObject.currentHex_b;
-                lineObject.material.color.setHex( lineObject.currentHex );
-                lineObject.material.opacity = cell_line_opacity;
-                // lineObject.material.transparent = true;
-              }
-            }
-          }
-        }
-        check_click(S1);
-        check_click(S2);
-      });
-
-      // //onRightClick
-      // document.addEventListener( 'contextmenu',);
     },
-    rightClick(event) {
+    clickCanvas(event) {
         this.check_click(S1);
         this.check_click(S2);
       },
@@ -274,16 +234,11 @@ export default {
         }
       }
     },
-    onChange_1(v) {
-      task_and_session = this.getTaskId + "_" + this.session1
-      this.getCellInfos();
-      this.add_cells_in_one_session(S1, 0xffffff, task_and_session)
+    onSelectButtonChange(v) {
+      this.add_cells_in_one_session(S1, 0xffffff, this.getTaskId + "_" + this.session1)
+      this.add_cells_in_one_session(S2, 0xffffff, this.getTaskId + "_" + this.session2)
     },
-    onChange_2(v) {
-      task_and_session = this.getTaskId + "_" + this.session2
-      this.getCellInfos();
-      this.add_cells_in_one_session(S2, 0xffffff, task_and_session)
-    },
+
     add_cells_in_one_session(s, color, task_and_session) {
       // console.log("add_cells_in_one_session:task_and_session->", task_and_session)
       let cellsArr = session_cache_object.get(task_and_session)
@@ -316,7 +271,9 @@ export default {
           opposite_relationjson = relation[""+this.session1]
         }
         let flagMatched = false;
-        if(opposite_relationjson) {
+        if(this.session2 == this.session1) {
+          flagMatched = true
+        }else if(opposite_relationjson) {
           let keys = Object.keys(opposite_relationjson)
           for(let key of keys) {
             if(opposite_relationjson[key].algorithmSelected) {
@@ -325,6 +282,9 @@ export default {
             }
           }
         }
+
+
+
         this.draw_single_cell(s.cell_group, points, blocks, color, imgBuffer, WIDTH, task_and_session, idx, flagMatched);
       }
 
@@ -348,19 +308,6 @@ export default {
       } else {
         // console.log(s.planeMesh)
         s.planeMesh.material.alphaMap = alphaTexture;
-      }
-
-    },
-    getCellInfos() {
-      // console.log("in getCellInfos:task_and_session->", task_and_session)
-      if (session_cache_object.has(task_and_session) === false) {
-        api.findBySession(task_and_session).then(res => {
-          let result_cell = res.data._embedded.cell;
-          // console.log("task_and_session:", result_cell[0].session)
-          session_cache_object.set(result_cell[0].session, result_cell);
-        })
-      } else {
-        // console.log("we have!", task_and_session)
       }
 
     },
