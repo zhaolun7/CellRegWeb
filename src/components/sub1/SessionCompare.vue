@@ -156,125 +156,124 @@ export default {
       // document.addEventListener( 'contextmenu',);
     },
     rightClick(event) {
-        function draw_comparing_cell(cell, group) {
-          // draw border
-          let xx = 99999; let yy = 99999;
-          for(let p of cell.points) {
-            // console.log(p)
-            if(xx > p[0]) {
-              xx = p[0];
-            }
-            if(yy > p[1]) {
-              yy = p[1];
-            }
-          }
-          let points = [];
-          for(let p of cell.points) {
-            points.push(new THREE.Vector3(p[1] - yy,p[0] - xx, 0));
-          }
-          // console.log(points)
-          let geometry = new THREE.BufferGeometry().setFromPoints(points);
-          let material = new THREE.LineDashedMaterial({
-            color: 0xffffff,
-            transparent: true,
-            opacity: cell_line_opacity*2,
-            // opacity: 1,
-            side: THREE.DoubleSide,
-            depthTest: false
-          });
-          let line = new THREE.Line(geometry, material);
-          line.renderOrder = 10;
-          // line.cell = cell; // made a link
-          while(group.children.length > 0) {
-            group.children.pop();
-          }
-          group.add(line);
-
-          //draw plane
-          const WIDTH = 30;
-          const HEIGHT = 30;
-          const imgBuffer = new Float32Array(HEIGHT*WIDTH*4).fill(0)
-          //init
-          for(let i = 0; i< HEIGHT; i ++) {
-            for(let j = 0; j < WIDTH; j++) {
-              let pos = (i*WIDTH +j) * 4;
-              imgBuffer[pos+3] = 255; // alpha channel
-            }
-          }
-          let maxPercent = 0;
-          for(let block of cell.blocks) {
-            let percent = block[2];
-            if(maxPercent < percent) {
-              maxPercent = percent;
-            }
-          }
-          for(let blockIdx in cell.blocks) {
-            let block = cell.blocks[blockIdx];
-            let pos = (WIDTH*(block[0] - xx) + (block[1] - yy))*4;
-            let v = block[2] / maxPercent * 255;
-            if(v > 255){
-              v = 255;
-            }
-            // v = 255;
-            imgBuffer[pos] = v;
-            imgBuffer[pos+1] = v;
-            imgBuffer[pos+2] = v;
-          }
-          const imgRealBuffer = Uint8Array.from(imgBuffer);
-          let alphaTexture = new THREE.DataTexture(imgRealBuffer, WIDTH, HEIGHT, THREE.RGBAFormat);
-          alphaTexture.needsUpdate = true;
-          alphaTexture.wrapS = THREE.RepeatWrapping;
-          alphaTexture.wrapT = THREE.RepeatWrapping;
-          alphaTexture.repeat.set( 1, 1 );
-
-          var planeGeometry = new THREE.PlaneGeometry(HEIGHT, WIDTH);
-          var planeMeterial = new THREE.MeshBasicMaterial({color: 0xffffff, side: THREE.DoubleSide, transparent: true});
-          planeMeterial.alphaMap = alphaTexture;
-          var planeMesh = new THREE.Mesh(planeGeometry,planeMeterial);
-          planeMesh.position.set(14,14,0)
-          // console.log(planeMesh);
-          group.add(planeMesh);
+        this.check_click(S1);
+        this.check_click(S2);
+      },
+    draw_comparing_cell(cell, group) {
+      // draw border
+      let xx = 99999; let yy = 99999;
+      for(let p of cell.points) {
+        // console.log(p)
+        if(xx > p[0]) {
+          xx = p[0];
         }
-        // console.log(event)
-        function check_click(s, thisobj) {
-          let rect = s.canvas.getBoundingClientRect();
-          if (event.clientX >= rect.left && event.clientX <= rect.right &&
-              event.clientY >= rect.top && event.clientY <= rect.bottom) {
-            const intersects = s.raycaster.intersectObjects( s.cell_group.children, false );
-            // console.log(intersects)
-            if (intersects.length > 0 && intersects[0].object.type == 'Line') {
-              let lineObject = intersects[0].object
-              lineObject.selected_nochange = ! lineObject.selected_nochange;
-              if (lineObject.selected_nochange) {
-                lineObject.currentHex_b = lineObject.currentHex;
-                let task_and_session = lineObject.userData["task_and_session"];
-                let idx = parseInt(lineObject.userData["idx"]);
-                let cell = session_cache_object.get(task_and_session)[idx];
-                // console.log(cell)
-                if(cell) {
-                  draw_comparing_cell(cell, s.cmp_group)
-                  if(s.name === "S1") {
-                    thisobj.session1_selected_cell_info.cell_id = cell.cid;
-                    thisobj.session1_selected_cell_info.neighbors = cell.relation[thisobj.session2]
-                  } else  {
-                    thisobj.session2_selected_cell_info.cell_id = cell.cid;
-                    thisobj.session2_selected_cell_info.neighbors = cell.relation[thisobj.session1]
-                  }
-                }
+        if(yy > p[1]) {
+          yy = p[1];
+        }
+      }
+      let points = [];
+      for(let p of cell.points) {
+        points.push(new THREE.Vector3(p[1] - yy,p[0] - xx, 0));
+      }
+      // console.log(points)
+      let geometry = new THREE.BufferGeometry().setFromPoints(points);
+      let material = new THREE.LineDashedMaterial({
+        color: 0xffffff,
+        transparent: true,
+        opacity: cell_line_opacity*2,
+        // opacity: 1,
+        side: THREE.DoubleSide,
+        depthTest: false
+      });
+      let line = new THREE.Line(geometry, material);
+      line.renderOrder = 10;
+      // line.cell = cell; // made a link
+      while(group.children.length > 0) {
+        group.children.pop();
+      }
+      group.add(line);
 
+      //draw plane
+      const WIDTH = 30;
+      const HEIGHT = 30;
+      const imgBuffer = new Float32Array(HEIGHT*WIDTH*4).fill(0)
+      //init
+      for(let i = 0; i< HEIGHT; i ++) {
+        for(let j = 0; j < WIDTH; j++) {
+          let pos = (i*WIDTH +j) * 4;
+          imgBuffer[pos+3] = 255; // alpha channel
+        }
+      }
+      let maxPercent = 0;
+      for(let block of cell.blocks) {
+        let percent = block[2];
+        if(maxPercent < percent) {
+          maxPercent = percent;
+        }
+      }
+      for(let blockIdx in cell.blocks) {
+        let block = cell.blocks[blockIdx];
+        let pos = (WIDTH*(block[0] - xx) + (block[1] - yy))*4;
+        let v = block[2] / maxPercent * 150 + 55;
+        if(v > 255){
+          v = 255;
+        }
+        // v = 255;
+        imgBuffer[pos] = v;
+        imgBuffer[pos+1] = v;
+        imgBuffer[pos+2] = v;
+      }
+      const imgRealBuffer = Uint8Array.from(imgBuffer);
+      let alphaTexture = new THREE.DataTexture(imgRealBuffer, WIDTH, HEIGHT, THREE.RGBAFormat);
+      alphaTexture.needsUpdate = true;
+      alphaTexture.wrapS = THREE.RepeatWrapping;
+      alphaTexture.wrapT = THREE.RepeatWrapping;
+      alphaTexture.repeat.set( 1, 1 );
 
-              } else {
-                lineObject.currentHex = lineObject.currentHex_b;
-                lineObject.material.color.setHex( lineObject.currentHex );
-                lineObject.material.opacity = cell_line_opacity;
-                // lineObject.material.transparent = true;
+      var planeGeometry = new THREE.PlaneGeometry(HEIGHT, WIDTH);
+      var planeMeterial = new THREE.MeshBasicMaterial({color: 0xffffff, side: THREE.DoubleSide, transparent: true});
+      planeMeterial.alphaMap = alphaTexture;
+      var planeMesh = new THREE.Mesh(planeGeometry,planeMeterial);
+      planeMesh.position.set(14,14,0)
+      // console.log(planeMesh);
+      group.add(planeMesh);
+    },
+    check_click(s) {
+      let rect = s.canvas.getBoundingClientRect();
+      if (event.clientX >= rect.left && event.clientX <= rect.right &&
+          event.clientY >= rect.top && event.clientY <= rect.bottom) {
+        const intersects = s.raycaster.intersectObjects( s.cell_group.children, false );
+        // console.log(intersects)
+        if (intersects.length > 0 && intersects[0].object.type == 'Line') {
+          let lineObject = intersects[0].object
+          lineObject.selected_nochange = ! lineObject.selected_nochange;
+          if (lineObject.selected_nochange) {
+            lineObject.currentHex_b = lineObject.currentHex;
+            let task_and_session = lineObject.userData["task_and_session"];
+            let idx = parseInt(lineObject.userData["idx"]);
+            let cell = session_cache_object.get(task_and_session)[idx];
+            // console.log(cell)
+            if(cell) {
+              this.draw_comparing_cell(cell, s.cmp_group)
+              if(s.name === "S1") {
+                this.session1_selected_cell_info.cell_id = cell.cid;
+                this.session1_selected_cell_info.neighbors = cell.relation[this.session2]
+              } else  {
+                this.session2_selected_cell_info.cell_id = cell.cid;
+                this.session2_selected_cell_info.neighbors = cell.relation[this.session1]
               }
             }
+
+
+          } else {
+            lineObject.currentHex = lineObject.currentHex_b;
+            lineObject.material.color.setHex( lineObject.currentHex );
+            lineObject.material.opacity = cell_line_opacity;
+            // lineObject.material.transparent = true;
           }
         }
-        check_click(S1,this);
-        check_click(S2,this);
-      },
+      }
+    },
     onChange_1(v) {
       task_and_session = this.getTaskId + "_" + this.session1
       this.getCellInfos();
@@ -305,10 +304,28 @@ export default {
         }
       }
       for (let idx in cellsArr) {
-        let points = cellsArr[idx].points
+        let points = cellsArr[idx].points;
         let blocks = cellsArr[idx].blocks;
-        // console.log(blocks)
-        this.draw_single_cell(s.cell_group, points, blocks, color, imgBuffer, WIDTH, task_and_session, idx);
+        // console.log(cellsArr[idx])
+
+        let relation = cellsArr[idx].relation;
+        let opposite_relationjson;
+        if (s.name === "S1") {
+          opposite_relationjson = relation[""+this.session2]
+        } else {
+          opposite_relationjson = relation[""+this.session1]
+        }
+        let flagMatched = false;
+        if(opposite_relationjson) {
+          let keys = Object.keys(opposite_relationjson)
+          for(let key of keys) {
+            if(opposite_relationjson[key].algorithmSelected) {
+              flagMatched = true;
+              break;
+            }
+          }
+        }
+        this.draw_single_cell(s.cell_group, points, blocks, color, imgBuffer, WIDTH, task_and_session, idx, flagMatched);
       }
 
 
@@ -477,7 +494,7 @@ export default {
 
       requestAnimationFrame(this.render);
     },
-    draw_single_cell(cell_group, points, blocks, colorHex, imgBuffer, WIDTH, task_and_session, idx) {
+    draw_single_cell(cell_group, points, blocks, colorHex, imgBuffer, WIDTH, task_and_session, idx, flagMatched) {
       for (let data of blocks) {
         let pos = (WIDTH * data[0] + data[1]) * 4;
         imgBuffer[pos] = imgBuffer[pos] * 0.5 + data[2] * 2560;
@@ -487,19 +504,30 @@ export default {
         imgBuffer[pos + 1] = imgBuffer[pos];
         imgBuffer[pos + 2] = imgBuffer[pos];
       }
+      let lineColorHex = colorHex;
+      let single_cell_line_opacity = cell_line_opacity;
+      if(flagMatched) {
+        // lineColorHex = 0x1ffe01;
+        lineColorHex = 0xffffff;
+      } else {
+        // not matched: yellow ?
+        lineColorHex = 0xeaca67
+        single_cell_line_opacity = 1;
+        // lineColorHex = 0xff0000
+      }
 
       let material = new THREE.LineDashedMaterial({
-        color: colorHex,
+        color: lineColorHex,
         transparent: true,
-        opacity: cell_line_opacity,
+        opacity: single_cell_line_opacity,
         side: THREE.DoubleSide,
         depthTest: false
       });
       let points_t3 = Array(points.length);
-      for (let idx in points) {
-        let x = points[idx][0];
-        let y = points[idx][1];
-        points_t3[idx] = (new THREE.Vector3(y - 174, x - 124, 0)); // T' because display of threejs is different from matlab matrix display ?
+      for (let idx2 in points) {
+        let x = points[idx2][0];
+        let y = points[idx2][1];
+        points_t3[idx2] = (new THREE.Vector3(y - 174, x - 124, 0)); // T' because display of threejs is different from matlab matrix display ?
       }
 
       let geometry = new THREE.BufferGeometry().setFromPoints(points_t3);
@@ -524,6 +552,14 @@ export default {
             let result_cell = res.data._embedded.cell;
             // console.log("task_and_session:", result_cell[0].session)
             session_cache_object.set(result_cell[0].session, result_cell);
+            if(result_cell[0].session === this.getTaskId + "_" + this.session1) {
+              // console.log("we got" + this.getTaskId + "_" + this.session1)
+              this.add_cells_in_one_session(S1, 0xffffff, result_cell[0].session)
+            }
+            if(result_cell[0].session === this.getTaskId + "_" + this.session2) {
+              // console.log("we got" + this.getTaskId + "_" + this.session2)
+              this.add_cells_in_one_session(S2, 0xffffff, result_cell[0].session)
+            }
           })
         }
       }
