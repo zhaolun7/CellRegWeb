@@ -410,20 +410,18 @@ export default {
             if (s.INTERSECTED != intersects[0].object && intersects[0].object.type == 'Line') {
               if (s.INTERSECTED && !s.INTERSECTED.selected_nochange) {
                 s.INTERSECTED.material.color.setHex(s.INTERSECTED.currentHex);
-                s.INTERSECTED.material.opacity = cell_line_opacity;
-                // s.INTERSECTED.material.transparent = true;
+                s.INTERSECTED.material.opacity = s.INTERSECTED.currentOpacity;
               }
               s.INTERSECTED = intersects[0].object;
               s.INTERSECTED.currentHex = s.INTERSECTED.material.color.getHex()
+              s.INTERSECTED.currentOpacity = s.INTERSECTED.material.opacity
               s.INTERSECTED.material.color.setHex(0xff0000);
               s.INTERSECTED.material.opacity = 1;
-              // s.INTERSECTED.material.transparent = false;
             }
           } else {
             if (s.INTERSECTED && !s.INTERSECTED.selected_nochange) {
               s.INTERSECTED.material.color.set(s.INTERSECTED.currentHex);
-              s.INTERSECTED.material.opacity = cell_line_opacity;
-              // INTERSECTED.material.transparent = true;
+              s.INTERSECTED.material.opacity = s.INTERSECTED.currentOpacity;
             }
             s.INTERSECTED = null;
           }
