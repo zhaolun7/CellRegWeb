@@ -1,8 +1,6 @@
 <template>
   <!--  <div v-if="getNumberOfSessions > 0" class="session_compare" id="session_compare">-->
   <div  class="session_compare" id="session_compare">
-    <!--    <h1>session_compare</h1>-->
-    <!--    <p>taskid: {{ $store.getters.getTaskId }}</p>-->
     <el-row :gutter="10">
       <el-col :span="10">
         <div class="grid-content ep-bg-purple" >
@@ -14,6 +12,26 @@
             </el-radio-group>
           </div>
           <canvas id="canvas_1" class="big_canvas" @click="clickCanvas" ></canvas>
+
+<!--          <div v-if="session1_selected_cell_info.neighbors.cell_id != '-'">-->
+          <div>
+            <p>Session:{{session1}} Cel ID:{{session1_selected_cell_info.cell_id}}</p>
+            <el-table :data="session1_selected_cell_info.neighbors"
+                      border
+                      :span-method="arraySpanMethod_1"
+                      style="width: 100%; margin-top: 20px"
+            >
+              <el-table-column label="Neighbors" width="100%" align="center">
+                <el-table-column prop="session" label="Session" />
+                <el-table-column prop="cid" label="cell id" />
+                <el-table-column prop="distance" label="Distance" />
+                <el-table-column prop="pSameDistance" label="P_same" />
+                <el-table-column prop="spatialCorrelation" label="Spatial Correlation" />
+                <el-table-column prop="pSameSpatialCorrelation" label="P_same" />
+                <el-table-column prop="algorithmSelected" label="selected" />
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
       </el-col>
       <el-col :span="4" style="margin-top: 50px">
@@ -22,12 +40,11 @@
           <div>
             <div>
               <p>Cell ID: {{session1_selected_cell_info.cell_id}}</p>
-              <p>Neighbors: {{session1_selected_cell_info.neighbors}}</p>
+              <p>{{this.session1_selected_cell_info.neighbors}}</p>
             </div>
 
             <div>
               <p>Cell ID: {{session2_selected_cell_info.cell_id}}</p>
-              <p>Neighbors: {{session2_selected_cell_info.neighbors}}</p>
             </div>
           </div>
         </div>
@@ -42,6 +59,25 @@
             </el-radio-group>
           </div>
           <canvas id="canvas_2" class="big_canvas" @click="clickCanvas"></canvas>
+<!--          <div v-if="session2_selected_cell_info.neighbors.cell_id != '-'">-->
+          <div>
+            <p>Session:{{session2}} Cel ID:{{session2_selected_cell_info.cell_id}}</p>
+            <el-table :data="session2_selected_cell_info.neighbors"
+                      border
+                      :span-method="arraySpanMethod_2"
+                      style="width: 100%; margin-top: 20px"
+            >
+              <el-table-column label="Neighbors" width="100%" align="center">
+                <el-table-column prop="session" label="Session" />
+                <el-table-column prop="cid" label="cell id" />
+                <el-table-column prop="distance" label="Distance" />
+                <el-table-column prop="pSameDistance" label="P_same" />
+                <el-table-column prop="spatialCorrelation" label="Spatial Correlation" />
+                <el-table-column prop="pSameSpatialCorrelation" label="P_same" />
+                <el-table-column prop="algorithmSelected" label="selected" />
+              </el-table-column>
+            </el-table>
+          </div>
         </div>
       </el-col>
     </el-row>
@@ -69,11 +105,11 @@ export default {
       session2: 2,
       session1_selected_cell_info: {
         cell_id:"-",
-        neighbors: {}
+        neighbors: []
       },
       session2_selected_cell_info: {
         cell_id:"-",
-        neighbors: {}
+        neighbors: []
       },
     }
   },
@@ -91,6 +127,73 @@ export default {
     this.render();
   },
   methods: {
+    arraySpanMethod_1({ row, column, rowIndex, columnIndex }) {
+      const arr = this.getSpan(this.session1_selected_cell_info.neighbors);
+      if (columnIndex < 1) {
+        const row = arr[rowIndex].row;
+        const col = arr[rowIndex].col;
+        return {
+          rowspan: row,
+          colspan: col
+        };
+      }
+    },
+    arraySpanMethod_2({ row, column, rowIndex, columnIndex }) {
+      const arr = this.getSpan(this.session2_selected_cell_info.neighbors);
+      if (columnIndex < 1) {
+        const row = arr[rowIndex].row;
+        const col = arr[rowIndex].col;
+        return {
+          rowspan: row,
+          colspan: col
+        };
+      }
+    },
+    getSpan(list) {
+      const newArr = [];
+      const obj = {};
+      for (let i = 0; i < list.length; i++) {
+        if (i === 0) {
+          obj.row = 1;
+          obj.col = 1;
+          newArr.push(obj);
+        } else {
+          if (list[i].session === list[i - 1].session) {
+            newArr.push({ row: 0, col: 0 });
+            const index = list.findIndex(item => {
+              return item.session === list[i - 1].session;
+            });
+            newArr[index].row++;
+          } else {
+            newArr.push({ row: 1, col: 1 });
+          }
+        }
+      }
+      // console.log(newArr)
+      return newArr;
+    },
+    relation2array(relation){
+      let resultArray = new Array();
+      let sessions = Object.keys(relation)
+      for(let session of sessions) {
+        let single_relation = relation[session];
+        let cids = Object.keys(single_relation);
+        for(let cid of cids) {
+          // deep copy
+          let mp = JSON.parse(JSON.stringify(single_relation[cid]))
+          mp["session"] = session;
+          mp["cid"] = cid;
+
+          mp["distance"] = (mp["distance"]).toFixed(5);
+          mp["pSameDistance"] = (mp["pSameDistance"]*100).toFixed(3) + '%';
+          mp["spatialCorrelation"] = (mp["spatialCorrelation"]*100).toFixed(3) + '%';
+          mp["pSameSpatialCorrelation"] = (mp["pSameSpatialCorrelation"]*100).toFixed(3) + '%';
+
+          resultArray.push(mp)
+        }
+      }
+      return resultArray;
+    },
     registerManyThings() {
       window.addEventListener('resize', () => {
         function resizeRender(s) {
@@ -218,10 +321,10 @@ export default {
               this.draw_comparing_cell(cell, s.cmp_group)
               if(s.name === "S1") {
                 this.session1_selected_cell_info.cell_id = cell.cid;
-                this.session1_selected_cell_info.neighbors = cell.relation[this.session2]
+                this.session1_selected_cell_info.neighbors = this.relation2array(cell.relation)
               } else  {
                 this.session2_selected_cell_info.cell_id = cell.cid;
-                this.session2_selected_cell_info.neighbors = cell.relation[this.session1]
+                this.session2_selected_cell_info.neighbors = this.relation2array(cell.relation)
               }
             }
           } else {
