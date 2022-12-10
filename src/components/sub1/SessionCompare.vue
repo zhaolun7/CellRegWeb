@@ -209,10 +209,11 @@ export default {
           lineObject.selected_nochange = ! lineObject.selected_nochange;
           if (lineObject.selected_nochange) {
             lineObject.currentHex_b = lineObject.currentHex;
+            lineObject.currentOpacity_b = lineObject.currentOpacity;
+
             let task_and_session = lineObject.userData["task_and_session"];
             let idx = parseInt(lineObject.userData["idx"]);
             let cell = session_cache_object.get(task_and_session)[idx];
-            // console.log(cell)
             if(cell) {
               this.draw_comparing_cell(cell, s.cmp_group)
               if(s.name === "S1") {
@@ -223,13 +224,11 @@ export default {
                 this.session2_selected_cell_info.neighbors = cell.relation[this.session1]
               }
             }
-
-
           } else {
             lineObject.currentHex = lineObject.currentHex_b;
+            lineObject.currentOpacity = lineObject.currentOpacity_b;
             lineObject.material.color.setHex( lineObject.currentHex );
-            lineObject.material.opacity = cell_line_opacity;
-            // lineObject.material.transparent = true;
+            lineObject.material.opacity = currentOpacity;
           }
         }
       }
