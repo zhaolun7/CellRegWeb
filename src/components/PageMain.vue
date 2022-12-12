@@ -34,7 +34,7 @@ export default {
     return {
       activeName:ref("second"),
       numberOfLoadedSessions: 0,
-      loading: true
+      loading: false
     }
   },
   computed:{
@@ -46,7 +46,7 @@ export default {
     },
     addNumberOfLoadedSessions(a) {
       this.numberOfLoadedSessions ++;
-      console.log("addNumberOfLoadedSessions:",this.numberOfLoadedSessions)
+      // console.log("addNumberOfLoadedSessions:",this.numberOfLoadedSessions)
       if(this.numberOfLoadedSessions === this.getNumberOfSessions) {
         this.loading = false;
       }

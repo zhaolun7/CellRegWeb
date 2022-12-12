@@ -7,7 +7,7 @@
 <!--        <el-button type="primary" size="small">Delete</el-button>-->
       </el-row>
       <el-menu
-          default-active="2"
+          :default-active="first_task_id"
           class="el-menu-vertical"
           @select="handleSelect"
       >
@@ -26,15 +26,14 @@ export default {
   name:"navigation",
   data(){
     return {
+      first_task_id:"",
       task_arr: []
     }
   },
   methods:{
     handleSelect(key, keyPath) {
       let oldTaskId = this.$store.getters.getTaskId
-      if(key === oldTaskId) {
-
-      } else {
+      if(key !== oldTaskId) {
         this.$store.commit("setTaskId", key)
         api.findTaskByTaskId(key).then(res=>{
           let task = res.data._embedded.task[0];
@@ -53,6 +52,10 @@ export default {
     api.findAllTasks().then(res=> {
       this.task_arr = res.data._embedded.task
       // console.log(this.task_arr)
+      if(this.task_arr.length > 0) {
+        this.first_task_id = this.task_arr[0].taskId
+        this.handleSelect(this.first_task_id)
+      }
     })
   }
 }
