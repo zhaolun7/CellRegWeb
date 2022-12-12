@@ -12,12 +12,11 @@
             </el-radio-group>
           </div>
           <canvas id="canvas_1" class="big_canvas" @click="clickCanvas" ></canvas>
-
-
           <div v-if="session1_selected_cell_info.cell_id!=='-'">
             <p >Session:{{session1}} Cel ID:{{session1_selected_cell_info.cell_id}}</p>
             <el-table :data="session1_selected_cell_info.neighbors"
                       border
+                      stripe
                       :span-method="arraySpanMethod_1"
                       style="width: 100%; margin-top: 20px"
 
@@ -38,17 +37,22 @@
       </el-col>
       <el-col :span="4" style="margin-top: 50px">
         <div class="grid-content ep-bg-purple" >
-          <canvas id="canvas_comparison" class="cmp_canvas"></canvas>
           <div>
             <div>
               <p>Cell ID: {{session1_selected_cell_info.cell_id}}</p>
-<!--              <p>{{this.session1_selected_cell_info.neighbors}}</p>-->
             </div>
-
             <div>
               <p>Cell ID: {{session2_selected_cell_info.cell_id}}</p>
             </div>
+            <div>
+              <span>unpaired color: </span><el-color-picker v-model="color_of_unpaired" />
+            </div>
+            <div>
+              <span>paired color: </span><el-color-picker v-model="color_of_paired" />
+            </div>
+            <canvas id="canvas_comparison" class="cmp_canvas"></canvas>
           </div>
+
         </div>
 
       </el-col>
@@ -113,6 +117,8 @@ export default {
         cell_id:"-",
         neighbors: []
       },
+      color_of_paired: "#00ff00",
+      color_of_unpaired: "#ff0000",
     }
   },
   computed: {
@@ -124,6 +130,8 @@ export default {
   },
 
   mounted() {
+    S1.this_obj = this
+    S2.this_obj = this
     this.draw_big_when_created();
     this.registerManyThings();
     this.render();
@@ -225,6 +233,7 @@ export default {
         this.check_click(S1);
         this.check_click(S2);
       },
+
     draw_comparing_cell(cell, group) {
       // draw border
       let xx = 99999; let yy = 99999;
@@ -343,7 +352,27 @@ export default {
       this.add_cells_in_one_session(S1, 0xffffff, this.getTaskId + "_" + this.session1)
       this.add_cells_in_one_session(S2, 0xffffff, this.getTaskId + "_" + this.session2)
     },
-
+    isFlagMatched(s, relation) {
+      let opposite_relationjson;
+      if (s.name === "S1") {
+        opposite_relationjson = relation[""+this.session2]
+      } else {
+        opposite_relationjson = relation[""+this.session1]
+      }
+      let flagMatched = false;
+      if(this.session2 == this.session1) {
+        flagMatched = true
+      }else if(opposite_relationjson) {
+        let keys = Object.keys(opposite_relationjson)
+        for(let key of keys) {
+          if(opposite_relationjson[key].algorithmSelected) {
+            flagMatched = true;
+            break;
+          }
+        }
+      }
+      return flagMatched;
+    },
     add_cells_in_one_session(s, color, task_and_session) {
       // console.log("add_cells_in_one_session:task_and_session->", task_and_session)
       let cellsArr = session_cache_object.get(task_and_session)
@@ -367,29 +396,7 @@ export default {
         let points = cellsArr[idx].points;
         let blocks = cellsArr[idx].blocks;
         // console.log(cellsArr[idx])
-
-        let relation = cellsArr[idx].relation;
-        let opposite_relationjson;
-        if (s.name === "S1") {
-          opposite_relationjson = relation[""+this.session2]
-        } else {
-          opposite_relationjson = relation[""+this.session1]
-        }
-        let flagMatched = false;
-        if(this.session2 == this.session1) {
-          flagMatched = true
-        }else if(opposite_relationjson) {
-          let keys = Object.keys(opposite_relationjson)
-          for(let key of keys) {
-            if(opposite_relationjson[key].algorithmSelected) {
-              flagMatched = true;
-              break;
-            }
-          }
-        }
-
-
-
+        let flagMatched = this.isFlagMatched(s, cellsArr[idx].relation)
         this.draw_single_cell(s.cell_group, points, blocks, color, imgBuffer, WIDTH, task_and_session, idx, flagMatched);
       }
 
@@ -502,6 +509,7 @@ export default {
 
     render(time) {
       // console.log(time)
+
       function renderSession(s) {
         // TODO: 同步镜像
         // console.log(typeof s.camera.position)
@@ -520,7 +528,12 @@ export default {
               s.INTERSECTED = intersects[0].object;
               s.INTERSECTED.currentHex = s.INTERSECTED.material.color.getHex()
               s.INTERSECTED.currentOpacity = s.INTERSECTED.material.opacity
-              s.INTERSECTED.material.color.setHex(0xff0000);
+              let cell = session_cache_object.get(s.INTERSECTED.userData["task_and_session"])[s.INTERSECTED.userData["idx"]] ;
+              let color = "0x"+s.this_obj.color_of_unpaired.substring(1)
+              if(s.this_obj.isFlagMatched(s, cell.relation)) {
+                color = "0x"+s.this_obj.color_of_paired.substring(1)
+              }
+              s.INTERSECTED.material.color.setHex(color);
               s.INTERSECTED.material.opacity = 1;
             }
           } else {
@@ -585,7 +598,7 @@ export default {
       line.renderOrder = 10;
       line.userData["task_and_session"] = task_and_session;
       line.userData["idx"] = idx;
-      // line.cell = cell; // made a link
+      // line.cell = cell;
       cell_group.add(line);
 
     }
