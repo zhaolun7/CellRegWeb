@@ -1,6 +1,6 @@
 <template>
   <!--  <div v-if="getNumberOfSessions > 0" class="session_compare" id="session_compare">-->
-  <div  class="session_compare" id="session_compare">
+  <div class="session_compare" id="session_compare">
     <el-row :gutter="10">
       <el-col :span="10">
         <div class="grid-content ep-bg-purple" >
@@ -13,14 +13,16 @@
           </div>
           <canvas id="canvas_1" class="big_canvas" @click="clickCanvas" ></canvas>
 
-<!--          <div v-if="session1_selected_cell_info.neighbors.cell_id != '-'">-->
-          <div>
-            <p>Session:{{session1}} Cel ID:{{session1_selected_cell_info.cell_id}}</p>
+
+          <div v-if="session1_selected_cell_info.cell_id!=='-'">
+            <p >Session:{{session1}} Cel ID:{{session1_selected_cell_info.cell_id}}</p>
             <el-table :data="session1_selected_cell_info.neighbors"
                       border
                       :span-method="arraySpanMethod_1"
                       style="width: 100%; margin-top: 20px"
+
             >
+
               <el-table-column label="Neighbors" width="100%" align="center">
                 <el-table-column prop="session" label="Session" />
                 <el-table-column prop="cid" label="cell id" />
@@ -40,7 +42,7 @@
           <div>
             <div>
               <p>Cell ID: {{session1_selected_cell_info.cell_id}}</p>
-              <p>{{this.session1_selected_cell_info.neighbors}}</p>
+<!--              <p>{{this.session1_selected_cell_info.neighbors}}</p>-->
             </div>
 
             <div>
@@ -60,7 +62,7 @@
           </div>
           <canvas id="canvas_2" class="big_canvas" @click="clickCanvas"></canvas>
 <!--          <div v-if="session2_selected_cell_info.neighbors.cell_id != '-'">-->
-          <div>
+          <div v-if="session1_selected_cell_info.cell_id!=='-'">
             <p>Session:{{session2}} Cel ID:{{session2_selected_cell_info.cell_id}}</p>
             <el-table :data="session2_selected_cell_info.neighbors"
                       border
@@ -127,6 +129,7 @@ export default {
     this.render();
   },
   methods: {
+
     arraySpanMethod_1({ row, column, rowIndex, columnIndex }) {
       const arr = this.getSpan(this.session1_selected_cell_info.neighbors);
       if (columnIndex < 1) {
@@ -589,7 +592,6 @@ export default {
   },
   watch: {
     getTaskChangeFlag: function (order) {
-      // console.log("SessionCompare: Ha! I find taskId change! new value is ", order)
       session_cache_object.clear()
       for (let idx of [...Array(this.getNumberOfSessions).keys()]) {
         let tas = this.getTaskId + "_" + (idx + 1)
@@ -602,11 +604,11 @@ export default {
             if(result_cell[0].session === this.getTaskId + "_" + this.session1) {
               // console.log("we got" + this.getTaskId + "_" + this.session1)
               this.add_cells_in_one_session(S1, 0xffffff, result_cell[0].session)
-            }
-            if(result_cell[0].session === this.getTaskId + "_" + this.session2) {
+            }else if(result_cell[0].session === this.getTaskId + "_" + this.session2) {
               // console.log("we got" + this.getTaskId + "_" + this.session2)
               this.add_cells_in_one_session(S2, 0xffffff, result_cell[0].session)
             }
+            this.$emit("addNumberOfLoadedSessions","")
           })
         }
       }

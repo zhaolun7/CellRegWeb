@@ -6,9 +6,6 @@ export default createStore({
     taskName:"(please select)",
     numberOfSessions:0,
     taskChangeFlag:0,
-    // s1: new Object(),
-    // s2: new Object(),
-    // cmp_s: new Object(),
     cell_line_opacity: 0.1
   },
   getters: {
