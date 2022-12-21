@@ -66,7 +66,7 @@
           </div>
           <canvas id="canvas_2" class="big_canvas" @click="clickCanvas"></canvas>
 <!--          <div v-if="session2_selected_cell_info.neighbors.cell_id != '-'">-->
-          <div v-if="session1_selected_cell_info.cell_id!=='-'">
+          <div v-if="session2_selected_cell_info.cell_id!=='-'">
             <p>Session:{{session2}} Cel ID:{{session2_selected_cell_info.cell_id}}</p>
             <el-table :data="session2_selected_cell_info.neighbors"
                       border
@@ -328,31 +328,33 @@ export default {
         const intersects = s.raycaster.intersectObjects( s.cell_group.children, false );
         if (intersects.length > 0 && intersects[0].object.type == 'Line') {
           let lineObject = intersects[0].object
-          lineObject.selected_nochange = ! lineObject.selected_nochange;
-          if (lineObject.selected_nochange) {
-            lineObject.currentHex_b = lineObject.currentHex;
-            lineObject.currentOpacity_b = lineObject.currentOpacity;
-
-            let task_and_session = lineObject.userData["task_and_session"];
-            let idx = parseInt(lineObject.userData["idx"]);
-            let cell = session_cache_object.get(task_and_session)[idx];
-            if(cell) {
-              this.draw_comparing_cell(cell, s.cmp_group)
-              if(s.name === "S1") {
-                // S1
-                this.session1_selected_cell_info.cell_id = cell.cid;
-                this.session1_selected_cell_info.neighbors = this.relation2array(cell.relation)
-              } else {
-                // S2
-                this.session2_selected_cell_info.cell_id = cell.cid;
-                this.session2_selected_cell_info.neighbors = this.relation2array(cell.relation)
-              }
+          let task_and_session = lineObject.userData["task_and_session"];
+          let idx = parseInt(lineObject.userData["idx"]);
+          let cell = session_cache_object.get(task_and_session)[idx];
+          if(cell) {
+            this.draw_comparing_cell(cell, s.cmp_group)
+            if(s.name === "S1") {
+              // S1
+              this.session1_selected_cell_info.cell_id = cell.cid;
+              this.session1_selected_cell_info.neighbors = this.relation2array(cell.relation)
+            } else {
+              // S2
+              this.session2_selected_cell_info.cell_id = cell.cid;
+              this.session2_selected_cell_info.neighbors = this.relation2array(cell.relation)
+            }
+          }
+          if(s.SELECTED_LINE) {
+            // unset last selected cell
+            s.SELECTED_LINE.material.color.setHex( s.SELECTED_LINE.userData.color );
+            s.SELECTED_LINE.material.opacity = s.SELECTED_LINE.userData.opacity;
+            if(s.SELECTED_LINE != lineObject) {
+              s.SELECTED_LINE = lineObject;
+            } else {
+              //if they are same,
+              s.SELECTED_LINE = null;
             }
           } else {
-            lineObject.currentHex = lineObject.currentHex_b;
-            lineObject.currentOpacity = lineObject.currentOpacity_b;
-            lineObject.material.color.setHex( lineObject.currentHex );
-            lineObject.material.opacity = lineObject.currentOpacity;
+            s.SELECTED_LINE = lineObject;
           }
         }
       }
@@ -530,14 +532,11 @@ export default {
           const intersects = s.raycaster.intersectObjects(s.cell_group.children, false);
           if (intersects.length > 0) {
             if (s.INTERSECTED != intersects[0].object && intersects[0].object.type == 'Line') {
-              if (s.INTERSECTED && !s.INTERSECTED.selected_nochange) {
-                s.INTERSECTED.material.color.setHex(s.INTERSECTED.currentHex);
-                s.INTERSECTED.material.opacity = s.INTERSECTED.currentOpacity;
+              if (s.INTERSECTED && s.INTERSECTED !== s.SELECTED_LINE) {
+                s.INTERSECTED.material.color.setHex(s.INTERSECTED.userData.color);
+                s.INTERSECTED.material.opacity = s.INTERSECTED.userData.opacity;
               }
               s.INTERSECTED = intersects[0].object;
-              s.INTERSECTED.currentHex = s.INTERSECTED.material.color.getHex()
-              s.INTERSECTED.currentOpacity = s.INTERSECTED.material.opacity
-
               let color = s.this_obj.get_color_of_unpaired()
               let session = session_cache_object.get(s.INTERSECTED.userData["task_and_session"])
               if(session !== undefined) {
@@ -551,9 +550,9 @@ export default {
               s.INTERSECTED.material.opacity = 1;
             }
           } else {
-            if (s.INTERSECTED && !s.INTERSECTED.selected_nochange) {
-              s.INTERSECTED.material.color.set(s.INTERSECTED.currentHex);
-              s.INTERSECTED.material.opacity = s.INTERSECTED.currentOpacity;
+            if (s.INTERSECTED && s.INTERSECTED !== s.SELECTED_LINE) {
+              s.INTERSECTED.material.color.setHex(s.INTERSECTED.userData.color);
+              s.INTERSECTED.material.opacity = s.INTERSECTED.userData.opacity;
             }
             s.INTERSECTED = null;
           }
