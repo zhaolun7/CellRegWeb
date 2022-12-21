@@ -618,6 +618,16 @@ export default {
   },
   watch: {
     getTaskChangeFlag: function (order) {
+      //init
+      this.session1_selected_cell_info =  {
+        cell_id:"-",
+        neighbors: []
+      }
+      this.session2_selected_cell_info =  {
+        cell_id:"-",
+        neighbors: []
+      }
+
       session_cache_object.clear()
       for (let idx of [...Array(this.getNumberOfSessions).keys()]) {
         let tas = this.getTaskId + "_" + (idx + 1)
