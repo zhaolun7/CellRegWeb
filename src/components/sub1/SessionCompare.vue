@@ -238,8 +238,8 @@ export default {
       });
     },
     clickCanvas(event) {
-        this.check_click(S1);
-        this.check_click(S2);
+        this.check_click(S1, event);
+        this.check_click(S2, event);
       },
 
     draw_comparing_cell(cell, group) {
@@ -321,12 +321,11 @@ export default {
       // console.log(planeMesh);
       group.add(planeMesh);
     },
-    check_click(s) {
+    check_click(s, event) {
       let rect = s.canvas.getBoundingClientRect();
       if (event.clientX >= rect.left && event.clientX <= rect.right &&
           event.clientY >= rect.top && event.clientY <= rect.bottom) {
         const intersects = s.raycaster.intersectObjects( s.cell_group.children, false );
-        // console.log(intersects)
         if (intersects.length > 0 && intersects[0].object.type == 'Line') {
           let lineObject = intersects[0].object
           lineObject.selected_nochange = ! lineObject.selected_nochange;
@@ -340,9 +339,11 @@ export default {
             if(cell) {
               this.draw_comparing_cell(cell, s.cmp_group)
               if(s.name === "S1") {
+                // S1
                 this.session1_selected_cell_info.cell_id = cell.cid;
                 this.session1_selected_cell_info.neighbors = this.relation2array(cell.relation)
-              } else  {
+              } else {
+                // S2
                 this.session2_selected_cell_info.cell_id = cell.cid;
                 this.session2_selected_cell_info.neighbors = this.relation2array(cell.relation)
               }
@@ -351,7 +352,7 @@ export default {
             lineObject.currentHex = lineObject.currentHex_b;
             lineObject.currentOpacity = lineObject.currentOpacity_b;
             lineObject.material.color.setHex( lineObject.currentHex );
-            lineObject.material.opacity = currentOpacity;
+            lineObject.material.opacity = lineObject.currentOpacity;
           }
         }
       }
@@ -611,7 +612,10 @@ export default {
       line.renderOrder = 10;
       line.userData["task_and_session"] = task_and_session;
       line.userData["idx"] = idx;
-      // line.cell = cell;
+      // for recover
+      line.userData["color"] = lineColorHex;
+      line.userData["opacity"] = single_cell_line_opacity;
+      // line.cell = cell;// do not match too many properties;
       cell_group.add(line);
 
     }
