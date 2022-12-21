@@ -137,7 +137,12 @@ export default {
     this.render();
   },
   methods: {
-
+    get_color_of_unpaired(){
+      return "0x"+this.color_of_unpaired.substring(1);
+    },
+    get_color_of_paired(){
+      return "0x"+this.color_of_paired.substring(1);
+    },
     arraySpanMethod_1({ row, column, rowIndex, columnIndex }) {
       const arr = this.getSpan(this.session1_selected_cell_info.neighbors);
       if (columnIndex < 1) {
@@ -216,17 +221,20 @@ export default {
       })
       document.addEventListener('pointermove', (event) => {
         // console.log(event)
-        function _check_move(s) {
+        function _check_move(s,opposite_s) {
           // console.log(s)
           let rect = s.canvas.getBoundingClientRect();
           if (event.clientX >= rect.left && event.clientX <= rect.right &&
               event.clientY >= rect.top && event.clientY <= rect.bottom) {
             s.pointer.x = (event.clientX - rect.left) / rect.width * 2 - 1;
             s.pointer.y = -(event.clientY - rect.top) / rect.height * 2 + 1;
+            // To prevent mouse moving fast
+            opposite_s.pointer.x = -1;
+            opposite_s.pointer.y = -1;
           }
         }
-        _check_move(S1);
-        _check_move(S2);
+        _check_move(S1, S2);
+        _check_move(S2, S1);
       });
     },
     clickCanvas(event) {
@@ -528,11 +536,16 @@ export default {
               s.INTERSECTED = intersects[0].object;
               s.INTERSECTED.currentHex = s.INTERSECTED.material.color.getHex()
               s.INTERSECTED.currentOpacity = s.INTERSECTED.material.opacity
-              let cell = session_cache_object.get(s.INTERSECTED.userData["task_and_session"])[s.INTERSECTED.userData["idx"]] ;
-              let color = "0x"+s.this_obj.color_of_unpaired.substring(1)
-              if(s.this_obj.isFlagMatched(s, cell.relation)) {
-                color = "0x"+s.this_obj.color_of_paired.substring(1)
+
+              let color = s.this_obj.get_color_of_unpaired()
+              let session = session_cache_object.get(s.INTERSECTED.userData["task_and_session"])
+              if(session !== undefined) {
+                let cell = session[s.INTERSECTED.userData["idx"]] ;
+                if(s.this_obj.isFlagMatched(s, cell.relation)) {
+                  color = s.this_obj.get_color_of_paired()
+                }
               }
+
               s.INTERSECTED.material.color.setHex(color);
               s.INTERSECTED.material.opacity = 1;
             }
@@ -615,10 +628,8 @@ export default {
             // console.log("task_and_session:", result_cell[0].session)
             session_cache_object.set(result_cell[0].session, result_cell);
             if(result_cell[0].session === this.getTaskId + "_" + this.session1) {
-              // console.log("we got" + this.getTaskId + "_" + this.session1)
               this.add_cells_in_one_session(S1, 0xffffff, result_cell[0].session)
             }else if(result_cell[0].session === this.getTaskId + "_" + this.session2) {
-              // console.log("we got" + this.getTaskId + "_" + this.session2)
               this.add_cells_in_one_session(S2, 0xffffff, result_cell[0].session)
             }
             this.$emit("addNumberOfLoadedSessions","")
