@@ -384,6 +384,29 @@ export default {
       }
       return flagMatched;
     },
+    getOppositeMatchedLineObject(s, relation) {
+      let opposite_relationjson;
+      let opposite_session ;
+      if (s.name === "S1") {
+        opposite_relationjson = relation[""+this.session2]
+        opposite_session = this.getTaskId + "_" + +this.session2;
+      } else {
+        opposite_relationjson = relation[""+this.session1]
+        opposite_session = this.getTaskId + "_" + +this.session1;
+      }
+
+      if(this.session2 == this.session1) {
+        return s.INTERSECTED
+      }else if(opposite_relationjson) {
+        let keys = Object.keys(opposite_relationjson)
+        for(let key of keys) {
+          if(opposite_relationjson[key].algorithmSelected) {
+            return session_cache_object.get(opposite_session)[parseInt(key)-1].lineObject
+          }
+        }
+      }
+      return null;
+    },
     add_cells_in_one_session(s, color, task_and_session) {
       // console.log("add_cells_in_one_session:task_and_session->", task_and_session)
       let cellsArr = session_cache_object.get(task_and_session)
@@ -404,11 +427,9 @@ export default {
         }
       }
       for (let idx in cellsArr) {
-        let points = cellsArr[idx].points;
-        let blocks = cellsArr[idx].blocks;
-        // console.log(cellsArr[idx])
+        let cell = cellsArr[idx];
         let flagMatched = this.isFlagMatched(s, cellsArr[idx].relation)
-        this.draw_single_cell(s.cell_group, points, blocks, color, imgBuffer, WIDTH, task_and_session, idx, flagMatched);
+        this.draw_single_cell(s.cell_group, cell, color, imgBuffer, WIDTH, task_and_session, idx, flagMatched);
       }
 
 
@@ -524,42 +545,67 @@ export default {
     },
 
     render(time) {
-      // console.log(time)
+      function renderSession(s, opposite_s) {
+        function unsetINTERSECTED(s) {
+          if (s.INTERSECTED && s.INTERSECTED !== s.SELECTED_LINE) {
+            // console.log(s.name)
+            if(s.INTERSECTED.userData.isInitiative) {
+              s.INTERSECTED.material.color.setHex(s.INTERSECTED.userData.color);
+              s.INTERSECTED.material.opacity = s.INTERSECTED.userData.opacity;
+              s.INTERSECTED.userData.isInitiative = false;
+              // console.log(s.INTERSECTED)
+              s.INTERSECTED = null;
+            }
+          }
+        }
+        function setINTERSECTED(s, lineObject, deepFlag) {
+          let oppositeMatchedLineObj = null;
+          s.INTERSECTED = lineObject;
+          s.INTERSECTED.userData["isInitiative"] = true;
 
-      function renderSession(s) {
-        // TODO: 同步镜像
-        // console.log(typeof s.camera.position)
-        // console.log("####",s)
+          let color = s.this_obj.get_color_of_unpaired()
+          let session = session_cache_object.get(s.INTERSECTED.userData["task_and_session"])
+          if(session) {
+            let cell = session[s.INTERSECTED.userData["idx"]] ;
+            if(s.this_obj.isFlagMatched(s, cell.relation)) {
+              color = s.this_obj.get_color_of_paired()
+              if(deepFlag) {
+                oppositeMatchedLineObj = s.this_obj.getOppositeMatchedLineObject(s, cell.relation);
+              }
+            }
+          }
+          s.INTERSECTED.material.color.setHex(color);
+          s.INTERSECTED.material.opacity = 1;
+          return oppositeMatchedLineObj;
+        }
+
         s.controls.update();
         s.camera.updateProjectionMatrix();
         if (s.raycaster) {
           s.raycaster.setFromCamera(s.pointer, s.camera);
           const intersects = s.raycaster.intersectObjects(s.cell_group.children, false);
           if (intersects.length > 0) {
-            if (s.INTERSECTED != intersects[0].object && intersects[0].object.type == 'Line') {
-              if (s.INTERSECTED && s.INTERSECTED !== s.SELECTED_LINE) {
-                s.INTERSECTED.material.color.setHex(s.INTERSECTED.userData.color);
-                s.INTERSECTED.material.opacity = s.INTERSECTED.userData.opacity;
-              }
-              s.INTERSECTED = intersects[0].object;
-              let color = s.this_obj.get_color_of_unpaired()
-              let session = session_cache_object.get(s.INTERSECTED.userData["task_and_session"])
-              if(session !== undefined) {
-                let cell = session[s.INTERSECTED.userData["idx"]] ;
-                if(s.this_obj.isFlagMatched(s, cell.relation)) {
-                  color = s.this_obj.get_color_of_paired()
-                }
-              }
-
-              s.INTERSECTED.material.color.setHex(color);
-              s.INTERSECTED.material.opacity = 1;
+            if (s.INTERSECTED !== intersects[0].object && intersects[0].object.type == 'Line') {
+              // // force clean
+              // console.log( " force clean ->", s.name)
+              // console.log( "s.INTERSECTED:", s.INTERSECTED)
+              // console.log("intersects[0].object:",intersects[0].object)
+              unsetINTERSECTED(s);
+              unsetINTERSECTED(opposite_s);
+            }
+            let oppositeMatchedLineObj = setINTERSECTED(s,intersects[0].object, opposite_s, true)
+            if(oppositeMatchedLineObj) {
+              setINTERSECTED(opposite_s,oppositeMatchedLineObj, null, false)
             }
           } else {
-            if (s.INTERSECTED && s.INTERSECTED !== s.SELECTED_LINE) {
-              s.INTERSECTED.material.color.setHex(s.INTERSECTED.userData.color);
-              s.INTERSECTED.material.opacity = s.INTERSECTED.userData.opacity;
+            //option clean..
+            if(!(s.pointer.x === -1 && s.pointer.y === -1)) {
+              // active canvas
+              // console.log("option clean:",s.name)
+              unsetINTERSECTED(s);
+              unsetINTERSECTED(opposite_s);
             }
-            s.INTERSECTED = null;
+
           }
         }
         s.renderer.render(s.scene, s.camera);
@@ -567,16 +613,16 @@ export default {
 
 
 
-      renderSession(S1);
-      renderSession(S2);
-      renderSession(CMP_S)
+      renderSession(S1, S2);
+      renderSession(S2, S1);
+      renderSession(CMP_S, null)
 
       // S2.camera.updateProjectionMatrix();
 
       requestAnimationFrame(this.render);
     },
-    draw_single_cell(cell_group, points, blocks, colorHex, imgBuffer, WIDTH, task_and_session, idx, flagMatched) {
-      for (let data of blocks) {
+    draw_single_cell(cell_group, cell, colorHex, imgBuffer, WIDTH, task_and_session, idx, flagMatched) {
+      for (let data of cell.blocks) {
         let pos = (WIDTH * data[0] + data[1]) * 4;
         imgBuffer[pos] = imgBuffer[pos] * 0.5 + data[2] * 2560;
         if (imgBuffer[pos] > 255) {
@@ -604,10 +650,10 @@ export default {
         side: THREE.DoubleSide,
         depthTest: false
       });
-      let points_t3 = Array(points.length);
-      for (let idx2 in points) {
-        let x = points[idx2][0];
-        let y = points[idx2][1];
+      let points_t3 = Array(cell.points.length);
+      for (let idx2 in cell.points) {
+        let x = cell.points[idx2][0];
+        let y = cell.points[idx2][1];
         points_t3[idx2] = (new THREE.Vector3(y - 174, x - 124, 0)); // T' because display of threejs is different from matlab matrix display ?
       }
 
@@ -620,6 +666,7 @@ export default {
       line.userData["color"] = lineColorHex;
       line.userData["opacity"] = single_cell_line_opacity;
       // line.cell = cell;// do not match too many properties;
+      cell.lineObject = line;
       cell_group.add(line);
 
     }
