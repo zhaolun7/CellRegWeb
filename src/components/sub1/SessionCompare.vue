@@ -513,9 +513,14 @@ export default {
       s.controls = new OrbitControls(s.camera, s.renderer.domElement);
       s.controls.enableRotate = false;
 
-      // add axes help
-      // const axesHelper = new THREE.AxesHelper(50);
-      // s.scene.add(axesHelper) ;
+
+      s.init_target = new THREE.Vector3();
+      s.init_target.copy(s.controls.target);
+      s.init_object_position = new THREE.Vector3();
+      s.init_object_position.copy(s.controls.object.position);
+      s.init_object_zoom = s.controls.object.zoom;
+      s.init_object_quaternion = new THREE.Quaternion()
+      s.init_object_quaternion.copy(s.controls.object.quaternion);
     },
 
     render(time) {
@@ -622,6 +627,19 @@ export default {
   watch: {
     getTaskChangeFlag: function (order) {
       //init
+      function initSwitch(s) {
+        s.camera.position.set(0, 0, 220);
+        s.controls.target.copy(s.init_target);
+        s.controls.object.position.copy(s.init_object_position);
+        s.controls.object.zoom = s.init_object_zoom;
+        s.controls.object.quaternion.copy(s.init_object_quaternion);
+        s.camera.updateProjectionMatrix();
+      }
+      if(order > 1) {
+        initSwitch(S1);
+        initSwitch(S2);
+        // initSwitch(CMP_S);
+      }
       this.session1_selected_cell_info =  {
         cell_id:"-",
         neighbors: []
