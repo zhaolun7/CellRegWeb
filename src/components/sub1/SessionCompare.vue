@@ -229,8 +229,8 @@ export default {
             s.pointer.x = (event.clientX - rect.left) / rect.width * 2 - 1;
             s.pointer.y = -(event.clientY - rect.top) / rect.height * 2 + 1;
             // To prevent mouse moving fast
-            opposite_s.pointer.x = -1;
-            opposite_s.pointer.y = -1;
+            opposite_s.pointer.x = undefined;
+            opposite_s.pointer.y = undefined;
           }
         }
         _check_move(S1, S2);
@@ -599,7 +599,7 @@ export default {
             }
           } else {
             //option clean..
-            if(!(s.pointer.x === -1 && s.pointer.y === -1)) {
+            if(!(s.pointer.x === undefined && s.pointer.y === undefined)) {
               // active canvas
               // console.log("option clean:",s.name)
               unsetINTERSECTED(s);
