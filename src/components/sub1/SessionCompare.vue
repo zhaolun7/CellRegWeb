@@ -21,7 +21,6 @@
                       style="width: 100%; margin-top: 20px"
 
             >
-
               <el-table-column label="Neighbors" width="100%" align="center">
                 <el-table-column prop="session" label="Session" />
                 <el-table-column prop="cid" label="cell id" />
@@ -38,6 +37,14 @@
       <el-col :span="4" style="margin-top: 50px">
         <div class="grid-content ep-bg-purple" >
           <div>
+            <span>Synchronous Marking: </span>
+            <el-switch
+                v-model="sync_mark"
+                inline-prompt
+                style="--el-switch-on-color: #13ce66; --el-switch-off-color: #ff4949"
+                active-text="Y"
+                inactive-text="N"
+            />
             <div>
               <p>Cell ID: {{session1_selected_cell_info.cell_id}}</p>
             </div>
@@ -52,7 +59,6 @@
             </div>
             <canvas id="canvas_comparison" class="cmp_canvas"></canvas>
           </div>
-
         </div>
 
       </el-col>
@@ -107,6 +113,7 @@ export default {
   name: 'session_compare',
   data() {
     return {
+      sync_mark: true,
       session1: 1,
       session2: 2,
       session1_selected_cell_info: {
@@ -238,8 +245,8 @@ export default {
       });
     },
     clickCanvas(event) {
-        this.check_click(S1, event);
-        this.check_click(S2, event);
+        this.check_click(S1, event, S2);
+        this.check_click(S2, event, S1);
       },
 
     draw_comparing_cell(cell, group) {
@@ -321,40 +328,50 @@ export default {
       // console.log(planeMesh);
       group.add(planeMesh);
     },
-    check_click(s, event) {
+    check_click(s, event, opposite_s) {
+      function _process_click_single_canvas(s, lineObject, deepFlag) {
+        let oppositeMatchedLineObject = null;
+        let task_and_session = lineObject.userData["task_and_session"];
+        let idx = parseInt(lineObject.userData["idx"]);
+        let cell = session_cache_object.get(task_and_session)[idx];
+        if(cell) {
+          if(deepFlag) {
+            oppositeMatchedLineObject = s.this_obj.getOppositeMatchedLineObject(s, cell.relation);
+          }
+          s.this_obj.draw_comparing_cell(cell, s.cmp_group)
+          if(s.name === "S1") {
+            // S1
+            s.this_obj.session1_selected_cell_info.cell_id = cell.cid;
+            s.this_obj.session1_selected_cell_info.neighbors = s.this_obj.relation2array(cell.relation)
+          } else {
+            // S2
+            s.this_obj.session2_selected_cell_info.cell_id = cell.cid;
+            s.this_obj.session2_selected_cell_info.neighbors = s.this_obj.relation2array(cell.relation)
+          }
+        }
+        if(s.SELECTED_LINE) {
+          // unset last selected cell
+          s.SELECTED_LINE.material.color.setHex( s.SELECTED_LINE.userData.color );
+          s.SELECTED_LINE.material.opacity = s.SELECTED_LINE.userData.opacity;
+          if(s.SELECTED_LINE != lineObject) {
+            s.SELECTED_LINE = lineObject;
+          } else {
+            //if they are same,
+            s.SELECTED_LINE = null;
+          }
+        } else {
+          s.SELECTED_LINE = lineObject;
+        }
+        return oppositeMatchedLineObject;
+      }
       let rect = s.canvas.getBoundingClientRect();
       if (event.clientX >= rect.left && event.clientX <= rect.right &&
           event.clientY >= rect.top && event.clientY <= rect.bottom) {
         const intersects = s.raycaster.intersectObjects( s.cell_group.children, false );
         if (intersects.length > 0 && intersects[0].object.type == 'Line') {
-          let lineObject = intersects[0].object
-          let task_and_session = lineObject.userData["task_and_session"];
-          let idx = parseInt(lineObject.userData["idx"]);
-          let cell = session_cache_object.get(task_and_session)[idx];
-          if(cell) {
-            this.draw_comparing_cell(cell, s.cmp_group)
-            if(s.name === "S1") {
-              // S1
-              this.session1_selected_cell_info.cell_id = cell.cid;
-              this.session1_selected_cell_info.neighbors = this.relation2array(cell.relation)
-            } else {
-              // S2
-              this.session2_selected_cell_info.cell_id = cell.cid;
-              this.session2_selected_cell_info.neighbors = this.relation2array(cell.relation)
-            }
-          }
-          if(s.SELECTED_LINE) {
-            // unset last selected cell
-            s.SELECTED_LINE.material.color.setHex( s.SELECTED_LINE.userData.color );
-            s.SELECTED_LINE.material.opacity = s.SELECTED_LINE.userData.opacity;
-            if(s.SELECTED_LINE != lineObject) {
-              s.SELECTED_LINE = lineObject;
-            } else {
-              //if they are same,
-              s.SELECTED_LINE = null;
-            }
-          } else {
-            s.SELECTED_LINE = lineObject;
+          let oppositeMatchedLineObject = _process_click_single_canvas(s, intersects[0].object, this.sync_mark)
+          if(this.sync_mark && oppositeMatchedLineObject) {
+            _process_click_single_canvas(opposite_s, oppositeMatchedLineObject, false)
           }
         }
       }
@@ -593,8 +610,8 @@ export default {
               unsetINTERSECTED(s);
               unsetINTERSECTED(opposite_s);
             }
-            let oppositeMatchedLineObj = setINTERSECTED(s,intersects[0].object, opposite_s, true)
-            if(oppositeMatchedLineObj) {
+            let oppositeMatchedLineObj = setINTERSECTED(s,intersects[0].object, opposite_s, s.this_obj.sync_mark)
+            if(s.this_obj.sync_mark && oppositeMatchedLineObj) {
               setINTERSECTED(opposite_s,oppositeMatchedLineObj, null, false)
             }
           } else {
